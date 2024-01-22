@@ -7,20 +7,23 @@ const reasourceRouter = (ResourceModel) => {
     //GET RESOURCES
     router.get("/", async (req, res) => {
         try {
-            const resources = await ResourceModel.find();
+            const resources = await ResourceModel.find().select(-_id - __v);
             res.send(resources);
         } catch (err) {
-            res.status(500).send(err.message);
+            console.error(err.message);
+            res.status(500).send(`Server error.`);
         }
     });
 
     //GET SINGLE RESOURCE
-    router.get("/:id", async (req, res) => {
+    router.get("/:slug", async (req, res) => {
+        const { id } = req.params;
         try {
-            const { id } = req.params;
-            const resource = await ResourceModel.findById(id);
+            const resource = await ResourceModel.findOne({ slug }).select(
+                -slug
+            );
             if (!resource) {
-                res.status(404).send(resource);
+                res.status(404).send(`Resource with ID ${id} not found.`);
             } else {
                 res.send(resource);
             }
@@ -31,8 +34,15 @@ const reasourceRouter = (ResourceModel) => {
 
     //POST
     router.post("/", async (req, res) => {
+        if (!req.body) {
+            res.status(400).send("You must send a body");
+        }
+
         try {
-            const resource = await ResourceModel.create(req.body);
+            const { _id } = await ResourceModel.create(req.body);
+            const resource = await ResourceModel.findByOne(_id).select(
+                -_id - __v
+            );
             res.status(201).send(resource);
         } catch (err) {
             res.status(400).send(err.message);

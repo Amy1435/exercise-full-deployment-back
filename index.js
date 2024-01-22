@@ -14,6 +14,7 @@ app.use(morgan("dev"));
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+//ROTTE
 app.use("/albums", albumRouter);
 app.use("/musicians", musicianRouter);
 
