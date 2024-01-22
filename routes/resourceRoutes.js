@@ -7,7 +7,7 @@ const reasourceRouter = (ResourceModel) => {
     //GET RESOURCES
     router.get("/", async (req, res) => {
         try {
-            const resources = await ResourceModel.find().select(-_id - __v);
+            const resources = await ResourceModel.find().select("-_id -__v");
             res.send(resources);
         } catch (err) {
             console.error(err.message);
@@ -17,13 +17,13 @@ const reasourceRouter = (ResourceModel) => {
 
     //GET SINGLE RESOURCE
     router.get("/:slug", async (req, res) => {
-        const { id } = req.params;
+        const { slug } = req.params;
         try {
             const resource = await ResourceModel.findOne({ slug }).select(
-                -slug
+                "-slug"
             );
             if (!resource) {
-                res.status(404).send(`Resource with ID ${id} not found.`);
+                res.status(404).send(`Resource with ID ${slug} not found.`);
             } else {
                 res.send(resource);
             }
@@ -41,7 +41,7 @@ const reasourceRouter = (ResourceModel) => {
         try {
             const { _id } = await ResourceModel.create(req.body);
             const resource = await ResourceModel.findByOne(_id).select(
-                -_id - __v
+                "-_id -__v"
             );
             res.status(201).send(resource);
         } catch (err) {
