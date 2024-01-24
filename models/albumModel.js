@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
+import Musician from "../models/musicianModel.js";
 const { Schema, SchemaTypes, model } = mongoose;
 
 const albumSchema = new Schema(
     {
         title: {
             type: String,
-            maxLength: 15,
+            maxLength: 20,
             minLength: 1,
             required: true,
             trim: true,
@@ -16,7 +17,8 @@ const albumSchema = new Schema(
         musician: {
             type: SchemaTypes.ObjectId,
             ref: "Musician",
-            maxLength: 15,
+            maxLength: 20,
+            required: true,
         },
         genre: {
             type: String,
@@ -28,7 +30,8 @@ const albumSchema = new Schema(
             validate: {
                 validator: async function (slug) {
                     const Album = this.constructor;
-                    const isValid = !(await Album.exists({ slug }));
+                    const isValid =
+                        this.slug === slug || !(await Album.exists({ slug }));
                     return isValid;
                 },
                 message: (prop) => `${prop.value} is already used as slug`,
@@ -41,21 +44,72 @@ const albumSchema = new Schema(
     }
 );
 
+//STATIC METHOD TO USE IN THE ROUTES TO FIND ALBUM BY THE SLUG
+albumSchema.statics.findBySlug = function (slug) {
+    return this.findOne({ slug });
+};
+
+//METHOD CHANGE MUSICIAN
+albumSchema.methods.changeMusician = async function (musicianId) {
+    this.musician = musicianId;
+    await this.save();
+};
+
+//METHOD CREATE SLUG
+albumSchema.methods.createSlug = async function () {
+    const slug = this.title.replaceAll(" ", "-").toLowerCase();
+    const Album = this.constructor;
+    let isSlugValid = false;
+    let currentSlug = slug;
+    let i = 1;
+    while (!isSlugValid) {
+        isSlugValid = !(await Album.exists({ slug: currentSlug }));
+        if (!isSlugValid) {
+            currentSlug = slug + "-" + i;
+            i++;
+        }
+    }
+    this.slug = currentSlug;
+};
+
+//METHOD REMOVE ALBUM FROM MUSICIAN
+album.methods.removeFromMusician = async function () {
+    if (this.musician) {
+        const oldMusician = await Musician.findById(this.musician);
+        if (oldMusician) {
+            await oldMusician.removeAlbum(this._id.toString());
+        }
+    }
+};
+
+//SCHEMA MIDDLEWARE PRE SAVE, IF MUSICIAN CHANGES IT REMOVES THE ALBUM FROM THE OLD ONE
 albumSchema.pre("save", async function (next) {
-    if (this.isModified("slug") || !this.slug) {
-        const slug = this.title.replaceAll(" ", "-").toLowerCase();
-        const Album = this.constructor;
-        let isSlugValid = false;
-        let currentSlug = slug;
-        let i = 1;
-        while (!isSlugValid) {
-            isSlugValid = !(await Album.exists({ slug: currentSlug }));
-            if (!isSlugValid) {
-                currentSlug = slug + "-" + i;
-                i++;
+    const Album = this.constructor;
+    if (!this.slug) {
+        await this.createSlug();
+    }
+
+    if (this.isModified("musician")) {
+        this.isMusicianModifed = true;
+        const oldAlbumId = this._id.toString();
+        const oldAlbum = await Album.findById(oldAlbumId);
+        if (oldAlbum) {
+            await oldAlbum.removeFromMusician();
+        }
+    }
+});
+
+//MIDDLEWARE POST
+albumSchema.post("save", async function (doc, next) {
+    if (doc.isMusicianModifed) {
+        const newMusicianId = doc.musician?.toString();
+        if (newMusicianId) {
+            const newMusician = await Musician.findById(newMusicianId);
+            if (newMusician) {
+                await newMusician.addAlbum(doc._id);
             }
         }
-        this.slug = currentSlug;
+        delete doc.isMusicianModifed;
     }
     next();
 });

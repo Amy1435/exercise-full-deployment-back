@@ -1,7 +1,8 @@
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
-import { albumRouter, musicianRouter } from "./routes/resourceRoutes.js";
+import albumsRouter from "./routes/albumsRoutes.js";
+import musiciansRouter from "./routes/musiciansRoutes.js";
 import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
@@ -15,8 +16,8 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 //ROTTE
-app.use("/albums", albumRouter);
-app.use("/musicians", musicianRouter);
+app.use("/albums", albumsRouter);
+app.use("/musicians", musiciansRouter);
 
 //SERVER
 mongoose
