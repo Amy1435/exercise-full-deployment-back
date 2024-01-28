@@ -5,8 +5,10 @@ const router = express.Router();
 //GET RESOURCES
 router.get("/", async (req, res) => {
     try {
-        const albums = await Album.find();
-        console.error(error.message);
+        const albums = await Album.find().populate({
+            path: "musician",
+            select: "first_name last_name art_name",
+        });
         res.send(albums);
     } catch (err) {
         console.error(err.message);
@@ -18,13 +20,13 @@ router.get("/", async (req, res) => {
 router.get("/:slug", async (req, res) => {
     const { slug } = req.params;
     try {
-        const album = await Album.findOne(slug).select("-slug");
+        const album = await Album.findBySlug(slug);
         if (!album) {
             throw new Error(`Resource with ID ${slug} not found.`);
         }
         res.send(album);
     } catch (err) {
-        console.error(error.message);
+        console.error(err.message);
         res.status(500).send(err.message);
     }
 });
@@ -37,17 +39,17 @@ router.post("/", async (req, res) => {
 
     try {
         const { _id } = await Album.create(req.body);
-        const album = await Album.findByOne(_id).select("-_id -__v");
-        console.error(error.message);
+        const album = await Album.findById(_id);
         res.status(201).send(album);
     } catch (err) {
+        console.error(err.message);
         res.status(400).send(err.message);
     }
 });
 
 //PATCH
 router.patch("/:slug", async (req, res) => {
-    if (!req.body || Object.keys(req.body).length) {
+    if (!req.body || !Object.keys(req.body).length) {
         return res
             .status(400)
             .send(`YOU must pass a body with at least one properties`);
@@ -64,6 +66,10 @@ router.patch("/:slug", async (req, res) => {
             album[key] = value;
         });
         await album.save();
+        const albumSend = await Album.findById(album._id).populate({
+            path: "musician",
+            select: "first_name last_name art_name _id",
+        });
         res.send(album);
     } catch (err) {
         console.error(err.message);
@@ -76,11 +82,11 @@ router.delete("/:slug", async (req, res) => {
     const { slug } = req.params;
     try {
         const album = await Album.findBySlug(slug);
-        await Album.deleteOne({ slug });
         await album.removeFromAuthor();
+        await Album.deleteOne({ slug });
         res.send(`Data with SLUG ${slug} deleted`);
     } catch (err) {
-        console.error(error.message);
+        console.error(err.message);
         res.status(404).send(err.message);
     }
 });

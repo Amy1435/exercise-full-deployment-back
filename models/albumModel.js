@@ -11,7 +11,7 @@ const albumSchema = new Schema(
             required: true,
             trim: true,
         },
-        numberOfSongs: {
+        number_of_songs: {
             type: Number,
         },
         musician: {
@@ -21,8 +21,14 @@ const albumSchema = new Schema(
             required: true,
         },
         genre: {
-            type: String,
+            type: [String],
             trim: true,
+        },
+        year_of_publication: {
+            type: Number,
+        },
+        url_album: {
+            type: String,
         },
         slug: {
             type: String,
@@ -51,8 +57,8 @@ albumSchema.statics.findBySlug = function (slug) {
 
 //METHOD CHANGE MUSICIAN
 albumSchema.methods.changeMusician = async function (musicianId) {
-    this.musician = musicianId;
-    await this.save();
+    const Album = this.constructor;
+    await Album.findByIdAndUpdate(this._id, { author: musicianId });
 };
 
 //METHOD CREATE SLUG
@@ -73,7 +79,7 @@ albumSchema.methods.createSlug = async function () {
 };
 
 //METHOD REMOVE ALBUM FROM MUSICIAN
-album.methods.removeFromMusician = async function () {
+albumSchema.methods.removeFromMusician = async function () {
     if (this.musician) {
         const oldMusician = await Musician.findById(this.musician);
         if (oldMusician) {
