@@ -22,7 +22,7 @@ router.get("/:slug", async (req, res) => {
     try {
         const album = await Album.findBySlug(slug).populate({
             path: "musician",
-            select: "first_name last_name art_name",
+            select: "first_name last_name art_name slug",
         });
         if (!album) {
             throw new Error(`Resource with ID ${slug} not found.`);
